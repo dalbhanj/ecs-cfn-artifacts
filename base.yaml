@@ -1,0 +1,55 @@
+Description: >
+  CloudFormation template for creating infrastructure resources such as VPC, ELB and ECS cluster
+
+
+Parameters:
+  TemplateBucket:
+    Type: String
+    Description: >
+      S3 Bucket used for nested templates
+
+Resources:
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/vpc.yaml
+      Parameters:
+        Name: !Ref AWS::StackName
+        VpcCIDR: 10.25.0.0/16
+        Subnet1CIDR: 10.25.10.0/24
+        Subnet2CIDR: 10.25.20.0/24
+
+  ELB:
+    Type: AWS::CloudFormation::Stack
+    Properties: 
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/load-balancer.yaml
+      Parameters:
+        Name: !Ref AWS::StackName
+        VpcId: !GetAtt VPC.Outputs.VpcId
+        VpcCIDR: !GetAtt VPC.Outputs.VpcCIDR
+        Subnet1: !GetAtt VPC.Outputs.Subnet1
+        Subnet2: !GetAtt VPC.Outputs.Subnet2
+
+  ECS: 
+    Type: AWS::CloudFormation::Stack
+    Properties: 
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/ecs-cluster.yaml
+      Parameters:
+        VpcId: !GetAtt VPC.Outputs.VpcId
+        VpcCIDR: !GetAtt VPC.Outputs.VpcCIDR
+        Subnet1: !GetAtt VPC.Outputs.Subnet1
+        Subnet2: !GetAtt VPC.Outputs.Subnet2
+        ELBSecurityGroup: !GetAtt ELB.Outputs.SecurityGroup
+
+Outputs:
+  ClusterName:
+    Description: ECS Cluster with Container Instance
+    Value: !GetAtt ECS.Outputs.ClusterName
+
+  LoadBalancerArn:
+    Description: ELB ARN that can be used to create a Service in ECS Cluster
+    Value: !GetAtt ELB.Outputs.LoadBalancerArn  
+
+  VPCID:
+    Description: VPC ID for ECS Cluster
+    Value: !GetAtt VPC.Outputs.VpcId
