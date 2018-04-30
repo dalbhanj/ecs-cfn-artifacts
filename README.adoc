@@ -1,0 +1,5 @@
+Repo for ECS CloudFormation templates
+
+1) git checkout branch-name
+
+2) ./start-here.sh
